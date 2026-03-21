@@ -1,3 +1,8 @@
+import streamlit as st
+from groq import Groq
+import os
+
+# 1. Configuration & System Prompt
 APR_SYSTEM_PROMPT = """
 You are an expert Automated Program Repair (APR) system. Your task is to analyze buggy code and provide a robust, syntactically correct fix. 
 
@@ -11,23 +16,18 @@ Format your response exactly with the headers:
 ### Repair Strategy
 ### Repaired Code
 """
-import streamlit as st
-import google.generativeai as genai
-import os
 
-# Configure API Key (Make sure to set this in your environment variables)
-os.environ.get("GEMINI_API_KEY")
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+# 2. Initialize Groq Client
+# Ensure "GROQ_API_KEY" is set in your environment variables or Streamlit secrets
+api_key = os.environ.get("GROQ_API_KEY")
+client = Groq(api_key=api_key)
 
-# Define the model and system prompt
-model = genai.GenerativeModel('gemini-2.5-flash', 
-                              system_instruction=APR_SYSTEM_PROMPT)
-
+# 3. Streamlit UI Setup
 st.set_page_config(page_title="APR Code Assistant", layout="wide")
 st.title("🛠️ Automated Program Repair (APR) Assistant")
-st.markdown("A research-to-prototype application demonstrating LLM-driven code repair workflows.")
+st.markdown("A research-to-prototype application demonstrating LLM-driven code repair via Groq.")
 
-# Input section
+# 4. Input section
 col1, col2 = st.columns(2)
 
 with col1:
@@ -37,17 +37,27 @@ with col1:
     
     if st.button("Generate Repair", type="primary"):
         if buggy_code:
-            with st.spinner("Analyzing and generating repair strategy..."):
-                # Construct the user prompt
-                user_prompt = f"Buggy Code:\n{buggy_code}\n\n"
-                if error_msg:
-                    user_prompt += f"Error Message:\n{error_msg}\n"
-                
-                # Call the API
-                response = model.generate_content(user_prompt)
-                
-                # Store response in session state to display in the second column
-                st.session_state['repair_output'] = response.text
+            with st.spinner("Analyzing with Groq LPU™..."):
+                try:
+                    # Construct the messages for Groq
+                    prompt_content = f"Buggy Code:\n{buggy_code}"
+                    if error_msg:
+                        prompt_content += f"\n\nError Message:\n{error_msg}"
+
+                    # Call Groq API
+                    chat_completion = client.chat.completions.create(
+                        messages=[
+                            {"role": "system", "content": APR_SYSTEM_PROMPT},
+                            {"role": "user", "content": prompt_content},
+                        ],
+                        model="llama-3.3-70b-versatile", # High-performance coding model
+                        temperature=0.2, # Lower temperature for more consistent code repair
+                    )
+                    
+                    # Store response
+                    st.session_state['repair_output'] = chat_completion.choices[0].message.content
+                except Exception as e:
+                    st.error(f"Error calling Groq API: {e}")
         else:
             st.warning("Please provide some code to repair.")
 
