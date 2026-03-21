@@ -2,6 +2,7 @@ import streamlit as st
 import traceback
 from groq import Groq
 import os
+import re
 
 # 1. Configuration & System Prompt
 APR_SYSTEM_PROMPT = """
@@ -16,14 +17,18 @@ Follow this strict methodology:
 def evaluate_code(repaired_code, test_code):
     """Executes the repaired code and the test cases together."""
     full_code = f"{repaired_code}\n\n{test_code}"
-    local_env = {}
+    
+    # Use a single dictionary for BOTH globals and locals
+    execution_env = {}
     
     try:
-        exec(full_code, {}, local_env)
+        # Pass execution_env as the sole dictionary
+        exec(full_code, execution_env)
         return True, "Success: All tests passed!"
     except Exception as e:
         # Capture the exact error traceback if the AI's code fails
         return False, traceback.format_exc()
+
 
 # 2. Initialize Groq Client
 # Ensure "GROQ_API_KEY" is set in your Streamlit secrets
