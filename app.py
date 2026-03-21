@@ -41,6 +41,8 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("Input Buggy Code")
     buggy_code = st.text_area("Paste the problematic Python snippet here:", height=300)
+    # The missing textbox is back!
+    error_msg = st.text_input("Optional: Paste the error message (if any)")
     
     if st.button("Generate Repair & Test", type="primary"):
         if buggy_code:
@@ -49,20 +51,23 @@ with col1:
             attempt = 1
             success = False
             
-            # The context that builds up if failures occur
-            current_prompt = f"Buggy Code:\n{buggy_code}\n\nFix this code and provide the output as raw Python."
+            # Reconstruct the prompt to include the optional error message
+            current_prompt = f"Buggy Code:\n{buggy_code}\n\n"
+            if error_msg:
+                current_prompt += f"Error Message:\n{error_msg}\n\n"
+            current_prompt += "Fix this code and provide the output as raw Python."
 
             while attempt <= max_retries and not success:
                 status_text.info(f"🔄 Attempt {attempt} of {max_retries}: Generating repair...")
                 
                 try:
-                    # Step 1: Ask the LLM for the fix
+                    # Step 1: Ask the LLM for the fix (Updated Model Version)
                     repair_response = client.chat.completions.create(
                         messages=[
                             {"role": "system", "content": APR_SYSTEM_PROMPT},
                             {"role": "user", "content": current_prompt}
                         ],
-                        model="llama-3.1-70b-versatile",
+                        model="llama-3.3-70b-versatile",
                     )
                     repair_text = repair_response.choices[0].message.content
                     
@@ -77,7 +82,7 @@ with col1:
                     test_prompt = f"Write a strict Python assert test for this code snippet. Only output raw Python code:\n{buggy_code}"
                     test_response = client.chat.completions.create(
                         messages=[{"role": "user", "content": test_prompt}],
-                        model="llama-3.1-70b-versatile",
+                        model="llama-3.3-70b-versatile",
                     )
                     test_text = test_response.choices[0].message.content
                     
